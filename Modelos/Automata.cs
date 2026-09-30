@@ -26,5 +26,61 @@ namespace SimuladorAutomatas.Modelos
             Transiciones = new List<Transicion>();
             Alfabeto = new HashSet<string>();
         }
+
+        public void AgregarEstado(Estado estado)
+        {
+            if (!Estados.Contains(estado))
+            {
+                Estados.Add(estado);
+            }
+        }
+
+        public void EstablecerEstadoInicial(Estado estado)
+        {
+            if (!Estados.Contains(estado))
+            {
+                AgregarEstado(estado);
+            }
+
+            EstadoInicial = estado;
+            estado.EsInicial = true;
+        }
+
+        public void AgregarEstadoFinal(Estado estado)
+        {
+            if (!Estados.Contains(estado))
+            {
+                AgregarEstado(estado);
+            }
+
+            if (!EstadosFinales.Contains(estado))
+            {
+                EstadosFinales.Add(estado);
+            }
+
+            estado.EsFinal = true;
+        }
+
+        public void AgregarTransicion(Estado origen, string simbolo, Estado destino)
+        {
+            if (!Estados.Contains(origen))
+            {
+                AgregarEstado(origen);
+            }
+
+            if (!Estados.Contains(destino))
+            {
+                AgregarEstado(destino);
+            }
+
+            Transicion transicion = new Transicion(origen, simbolo, destino);
+
+            Transiciones.Add(transicion);
+
+            if (simbolo != "ε")
+            {
+                Alfabeto.Add(simbolo);
+            }
+        }
     }
 }
