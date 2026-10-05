@@ -1,4 +1,4 @@
-using SimuladorAutomatas.Modelos;
+﻿using SimuladorAutomatas.Modelos;
 using SimuladorAutomatas.Servicios;
 using System;
 using System.Windows.Forms;
@@ -9,6 +9,7 @@ namespace SimuladorAutomatas
         public Form1()
         {
             InitializeComponent();
+            
 
         }
 
@@ -16,6 +17,7 @@ namespace SimuladorAutomatas
         {
 
         }
-       
+      
+
     }
 }

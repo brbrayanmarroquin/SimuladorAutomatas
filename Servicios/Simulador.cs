@@ -14,10 +14,14 @@ namespace SimuladorAutomatas.Servicios
     {
         public bool SimularAFN(Automata automata, string cadena)
         {
-            // Comenzamos desde el estado inicial
+            // Comenzamos con el estado inicial
             HashSet<Estado> estadosActuales = new HashSet<Estado>();
 
             estadosActuales.Add(automata.EstadoInicial);
+
+            // Antes de leer la cadena,
+            // buscamos todos los estados alcanzables mediante ε
+            estadosActuales = CerraduraEpsilon(automata, estadosActuales);
 
             // Procesamos cada símbolo de la cadena
             foreach (char caracter in cadena)
@@ -28,8 +32,6 @@ namespace SimuladorAutomatas.Servicios
 
                 foreach (Estado estadoActual in estadosActuales)
                 {
-                    // Buscamos las transiciones que coincidan
-                    // con el estado y el símbolo actual
                     List<Transicion> transiciones = automata.Transiciones
                         .Where(t => t.EstadoOrigen == estadoActual &&
                                     t.Simbolo == simbolo)
@@ -41,10 +43,12 @@ namespace SimuladorAutomatas.Servicios
                     }
                 }
 
-                estadosActuales = nuevosEstados;
+                // Después de consumir el símbolo,
+                // volvemos a buscar las ε-transiciones.
+                estadosActuales = CerraduraEpsilon(automata, nuevosEstados);
 
-                // Si ya no tenemos estados posibles,
-                // la cadena no puede ser aceptada.
+                // Si no quedan estados posibles,
+                // la cadena es rechazada.
                 if (estadosActuales.Count == 0)
                 {
                     return false;
@@ -62,6 +66,41 @@ namespace SimuladorAutomatas.Servicios
             }
 
             return false;
+        }
+
+        private HashSet<Estado> CerraduraEpsilon(
+            Automata automata,
+            HashSet<Estado> estadosIniciales)
+        {
+            HashSet<Estado> resultado =
+                new HashSet<Estado>(estadosIniciales);
+
+            Stack<Estado> pendientes =
+                new Stack<Estado>(estadosIniciales);
+
+            while (pendientes.Count > 0)
+            {
+                Estado estadoActual = pendientes.Pop();
+
+                List<Transicion> transicionesEpsilon =
+                    automata.Transiciones
+                        .Where(t => t.EstadoOrigen == estadoActual &&
+                                    t.Simbolo == "ε")
+                        .ToList();
+
+                foreach (Transicion transicion in transicionesEpsilon)
+                {
+                    Estado destino = transicion.EstadoDestino;
+
+                    if (!resultado.Contains(destino))
+                    {
+                        resultado.Add(destino);
+                        pendientes.Push(destino);
+                    }
+                }
+            }
+
+            return resultado;
         }
     }
 }
