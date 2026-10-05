@@ -1,3 +1,7 @@
+using SimuladorAutomatas.Modelos;
+using SimuladorAutomatas.Servicios;
+using System;
+using System.Windows.Forms;
 namespace SimuladorAutomatas
 {
     public partial class Form1 : Form
@@ -5,6 +9,13 @@ namespace SimuladorAutomatas
         public Form1()
         {
             InitializeComponent();
+
         }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+       
     }
 }
