@@ -3,7 +3,6 @@ using SimuladorAutomatas.Modelos;
 using SimuladorAutomatas.Servicios;
 using System;
 using System.Windows.Forms;
-using SimuladorAutomatas.Automatas;
 namespace SimuladorAutomatas
 {
     public partial class Form1 : Form
@@ -12,9 +11,70 @@ namespace SimuladorAutomatas
         {
             InitializeComponent();
             ProbarEpsilon();
+            ProbarAFD();
 
 
 
+        }
+        private void ProbarAFD()
+        {
+            AFD automata = new AFD();
+
+            // Creamos los estados
+            Estado q0 = new Estado("q0");
+            Estado q1 = new Estado("q1");
+            Estado q2 = new Estado("q2");
+
+            // Agregamos los estados
+            automata.AgregarEstado(q0);
+            automata.AgregarEstado(q1);
+            automata.AgregarEstado(q2);
+
+            // Estado inicial
+            automata.EstablecerEstadoInicial(q0);
+
+            // Estado final
+            automata.AgregarEstadoFinal(q2);
+
+            // Transiciones del AFD
+            automata.AgregarTransicionAFD(q0, "a", q1);
+            automata.AgregarTransicionAFD(q1, "b", q2);
+
+
+            try
+            {
+                automata.AgregarTransicionAFD(q0, "ε", q2);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    ex.Message,
+                    "Validación del AFD"
+                );
+            }
+            // Simulador
+            Simulador simulador = new Simulador();
+
+            // Pruebas
+            bool resultadoAB =
+                simulador.SimularAFN(automata, "ab");
+
+            bool resultadoA =
+                simulador.SimularAFN(automata, "a");
+
+            bool resultadoB =
+                simulador.SimularAFN(automata, "b");
+
+            MessageBox.Show(
+                "Prueba del AFD:\n\n" +
+                "Cadena 'ab': " +
+                (resultadoAB ? "ACEPTADA" : "RECHAZADA") + "\n" +
+                "Cadena 'a': " +
+                (resultadoA ? "ACEPTADA" : "RECHAZADA") + "\n" +
+                "Cadena 'b': " +
+                (resultadoB ? "ACEPTADA" : "RECHAZADA"),
+                "Prueba de AFD"
+            );
         }
 
         private void Form1_Load(object sender, EventArgs e)
