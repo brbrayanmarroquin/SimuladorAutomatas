@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SimuladorAutomatas.Modelos
 {
@@ -29,7 +31,16 @@ namespace SimuladorAutomatas.Modelos
 
         public void AgregarEstado(Estado estado)
         {
-            if (!Estados.Contains(estado))
+            if (estado == null)
+            {
+                throw new ArgumentNullException(nameof(estado));
+            }
+
+            // No permitimos dos estados con el mismo nombre
+            bool nombreExiste = Estados.Any(e =>
+                e.Nombre.Equals(estado.Nombre, StringComparison.OrdinalIgnoreCase));
+
+            if (!nombreExiste)
             {
                 Estados.Add(estado);
             }
@@ -37,9 +48,20 @@ namespace SimuladorAutomatas.Modelos
 
         public void EstablecerEstadoInicial(Estado estado)
         {
+            if (estado == null)
+            {
+                throw new ArgumentNullException(nameof(estado));
+            }
+
             if (!Estados.Contains(estado))
             {
                 AgregarEstado(estado);
+            }
+
+            // Quitamos la marca de inicial al estado anterior
+            if (EstadoInicial != null)
+            {
+                EstadoInicial.EsInicial = false;
             }
 
             EstadoInicial = estado;
@@ -48,6 +70,11 @@ namespace SimuladorAutomatas.Modelos
 
         public void AgregarEstadoFinal(Estado estado)
         {
+            if (estado == null)
+            {
+                throw new ArgumentNullException(nameof(estado));
+            }
+
             if (!Estados.Contains(estado))
             {
                 AgregarEstado(estado);
@@ -61,8 +88,28 @@ namespace SimuladorAutomatas.Modelos
             estado.EsFinal = true;
         }
 
-        public void AgregarTransicion(Estado origen, string simbolo, Estado destino)
+        public void AgregarTransicion(
+            Estado origen,
+            string simbolo,
+            Estado destino)
         {
+            if (origen == null)
+            {
+                throw new ArgumentNullException(nameof(origen));
+            }
+
+            if (destino == null)
+            {
+                throw new ArgumentNullException(nameof(destino));
+            }
+
+            if (string.IsNullOrWhiteSpace(simbolo))
+            {
+                throw new ArgumentException(
+                    "El símbolo de la transición no puede estar vacío.",
+                    nameof(simbolo));
+            }
+
             if (!Estados.Contains(origen))
             {
                 AgregarEstado(origen);
@@ -73,10 +120,12 @@ namespace SimuladorAutomatas.Modelos
                 AgregarEstado(destino);
             }
 
-            Transicion transicion = new Transicion(origen, simbolo, destino);
+            Transicion transicion =
+                new Transicion(origen, simbolo, destino);
 
             Transiciones.Add(transicion);
 
+            // ε no pertenece al alfabeto
             if (simbolo != "ε")
             {
                 Alfabeto.Add(simbolo);
