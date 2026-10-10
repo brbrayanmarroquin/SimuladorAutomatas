@@ -19,7 +19,7 @@ namespace SimuladorAutomatas
         private DataGridView dgvTransiciones;
 
         public Form1()
-        {
+        {q0
             InitializeComponent();
 
             // Configuración de la ventana.
