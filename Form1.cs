@@ -4,8 +4,8 @@ using SimuladorAutomatas.Servicios;
 using System;
 using System.Windows.Forms;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Linq;
-using System.Drawing;
 
 
 namespace SimuladorAutomatas
@@ -18,8 +18,11 @@ namespace SimuladorAutomatas
         // Tabla de transiciones.
         private DataGridView dgvTransiciones;
 
+        // Panel donde se dibuja automáticamente el autómata.
+        private Panel panelAutomata;
+
         public Form1()
-        {q0
+        {
             InitializeComponent();
 
             // Configuración de la ventana.
@@ -463,27 +466,14 @@ namespace SimuladorAutomatas
             representacion.Margin = new Padding(5);
 
 
-            Panel lienzo = new Panel();
+            panelAutomata = new Panel();
 
-            lienzo.Name = "panelAutomata";
-            lienzo.Dock = DockStyle.Fill;
-            lienzo.BackColor = Color.White;
+            panelAutomata.Name = "panelAutomata";
+            panelAutomata.Dock = DockStyle.Fill;
+            panelAutomata.BackColor = Color.White;
+            panelAutomata.Paint += (s, e) => DibujarAutomata(e.Graphics);
 
-
-            Label lblLienzo = new Label();
-
-            lblLienzo.Text =
-                "La representación gráfica aparecerá aquí.";
-
-            lblLienzo.Dock = DockStyle.Fill;
-
-            lblLienzo.TextAlign =
-                ContentAlignment.MiddleCenter;
-
-            lblLienzo.ForeColor = Color.DimGray;
-
-            lienzo.Controls.Add(lblLienzo);
-            representacion.Controls.Add(lienzo);
+            representacion.Controls.Add(panelAutomata);
 
 
             // Incorporar los cuatro paneles.
@@ -674,7 +664,7 @@ namespace SimuladorAutomatas
 
                     // Limpiar las transiciones de la interfaz.
                     dgvTransiciones.Rows.Clear();
-
+                    panelAutomata.Invalidate();
 
                     lblResultado.ForeColor = Color.DarkGreen;
 
@@ -782,7 +772,7 @@ namespace SimuladorAutomatas
 
                     // Mostrar la transición en la tabla.
                     MostrarTransiciones();
-
+                    panelAutomata.Invalidate();
 
                     txtOrigen.Clear();
                     txtSimbolo.Clear();
@@ -897,6 +887,7 @@ namespace SimuladorAutomatas
                     cmbTipo.SelectedItem = "AFD";
 
                     MostrarTransiciones();
+                    panelAutomata.Invalidate();
 
                     lblResultado.ForeColor = Color.DarkGreen;
 
@@ -946,6 +937,7 @@ namespace SimuladorAutomatas
                     automataActual = minimizador.Minimizar(afd);
 
                     MostrarTransiciones();
+                    panelAutomata.Invalidate();
 
                     lblResultado.ForeColor = Color.DarkGreen;
 
@@ -998,7 +990,7 @@ namespace SimuladorAutomatas
                 txtDestino.Clear();
 
                 dgvTransiciones.Rows.Clear();
-
+                panelAutomata.Invalidate();
 
                 lblResultado.Text =
                     "Crea un autómata para comenzar.";
@@ -1024,6 +1016,124 @@ namespace SimuladorAutomatas
                     t.EstadoOrigen.Nombre,
                     t.Simbolo,
                     t.EstadoDestino.Nombre);
+            }
+
+            if (panelAutomata != null)
+            {
+                panelAutomata.Invalidate();
+            }
+        }
+
+        // Dibuja los estados y transiciones usando GDI+ de Windows Forms.
+        private void DibujarAutomata(Graphics graphics)
+        {
+            graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            graphics.Clear(Color.White);
+
+            if (automataActual == null || automataActual.Estados == null ||
+                automataActual.Estados.Count == 0)
+            {
+                using (Font fuenteVacia = new Font("Segoe UI", 10))
+                using (Brush pincelVacio = new SolidBrush(Color.DimGray))
+                {
+                    string mensaje = "La representación gráfica aparecerá aquí.";
+                    SizeF medida = graphics.MeasureString(mensaje, fuenteVacia);
+                    graphics.DrawString(mensaje, fuenteVacia, pincelVacio,
+                        Math.Max(5, (panelAutomata.ClientSize.Width - medida.Width) / 2),
+                        Math.Max(5, (panelAutomata.ClientSize.Height - medida.Height) / 2));
+                }
+                return;
+            }
+
+            int ancho = panelAutomata.ClientSize.Width;
+            int alto = panelAutomata.ClientSize.Height;
+            if (ancho < 80 || alto < 80) return;
+
+            const float radio = 24f;
+            float y = alto / 2f;
+            float margen = radio + 28f;
+            float espacio = automataActual.Estados.Count == 1
+                ? 0
+                : Math.Max(0, (ancho - margen * 2) / (float)(automataActual.Estados.Count - 1));
+
+            var posiciones = new System.Collections.Generic.Dictionary<Estado, PointF>();
+            for (int i = 0; i < automataActual.Estados.Count; i++)
+            {
+                float x = automataActual.Estados.Count == 1
+                    ? ancho / 2f
+                    : margen + i * espacio;
+                posiciones[automataActual.Estados[i]] = new PointF(x, y);
+            }
+
+            using (Pen lapiz = new Pen(Color.FromArgb(35, 45, 60), 1.8f))
+            using (Pen lapizInicial = new Pen(Color.FromArgb(35, 45, 60), 1.8f))
+            using (Brush rellenoEstado = new SolidBrush(Color.FromArgb(222, 235, 255)))
+            using (Brush pincelTexto = new SolidBrush(Color.FromArgb(25, 35, 50)))
+            using (Font fuenteEstado = new Font("Segoe UI", 9, FontStyle.Bold))
+            using (Font fuenteSimbolo = new Font("Segoe UI", 9, FontStyle.Bold))
+            using (StringFormat centrado = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+            {
+                lapiz.EndCap = LineCap.ArrowAnchor;
+                lapizInicial.EndCap = LineCap.ArrowAnchor;
+
+                // Transiciones entre estados distintos.
+                foreach (Transicion transicion in automataActual.Transiciones)
+                {
+                    if (!posiciones.ContainsKey(transicion.EstadoOrigen) ||
+                        !posiciones.ContainsKey(transicion.EstadoDestino)) continue;
+
+                    PointF origen = posiciones[transicion.EstadoOrigen];
+                    PointF destino = posiciones[transicion.EstadoDestino];
+
+                    if (transicion.EstadoOrigen == transicion.EstadoDestino)
+                    {
+                        RectangleF bucle = new RectangleF(origen.X - 15, origen.Y - radio - 28, 30, 28);
+                        graphics.DrawArc(lapiz, bucle, 180, 300);
+                        graphics.DrawString(transicion.Simbolo, fuenteSimbolo, pincelTexto,
+                            origen.X, origen.Y - radio - 38, centrado);
+                    }
+                    else
+                    {
+                        float dx = destino.X - origen.X;
+                        float dy = destino.Y - origen.Y;
+                        float distancia = (float)Math.Sqrt(dx * dx + dy * dy);
+                        if (distancia < 1) continue;
+                        float ux = dx / distancia;
+                        float uy = dy / distancia;
+                        PointF inicio = new PointF(origen.X + ux * radio, origen.Y + uy * radio);
+                        PointF fin = new PointF(destino.X - ux * (radio + 3), destino.Y - uy * (radio + 3));
+                        graphics.DrawLine(lapiz, inicio, fin);
+                        PointF medio = new PointF((inicio.X + fin.X) / 2f, (inicio.Y + fin.Y) / 2f - 12);
+                        graphics.DrawString(transicion.Simbolo, fuenteSimbolo, pincelTexto, medio, centrado);
+                    }
+                }
+
+                // Flecha de entrada y círculos de los estados.
+                foreach (Estado estado in automataActual.Estados)
+                {
+                    PointF centro = posiciones[estado];
+                    RectangleF circulo = new RectangleF(centro.X - radio, centro.Y - radio, radio * 2, radio * 2);
+
+                    if (estado.EsInicial || estado == automataActual.EstadoInicial)
+                    {
+                        graphics.DrawLine(lapizInicial,
+                            Math.Max(2, centro.X - radio - 24), centro.Y,
+                            centro.X - radio - 2, centro.Y);
+                    }
+
+                    graphics.FillEllipse(rellenoEstado, circulo);
+                    graphics.DrawEllipse(lapiz, circulo);
+
+                    if (estado.EsFinal || (automataActual.EstadosFinales != null && automataActual.EstadosFinales.Contains(estado)))
+                    {
+                        RectangleF circuloInterior = new RectangleF(
+                            centro.X - radio + 5, centro.Y - radio + 5,
+                            (radio - 5) * 2, (radio - 5) * 2);
+                        graphics.DrawEllipse(lapiz, circuloInterior);
+                    }
+
+                    graphics.DrawString(estado.Nombre, fuenteEstado, pincelTexto, circulo, centrado);
+                }
             }
         }
 
