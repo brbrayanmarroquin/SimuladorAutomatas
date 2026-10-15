@@ -2,6 +2,7 @@
 using SimuladorAutomatas.Modelos;
 using SimuladorAutomatas.Servicios;
 using System;
+using System.Collections.Generic;
 using System.Windows.Forms;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -20,6 +21,10 @@ namespace SimuladorAutomatas
 
         // Panel donde se dibuja automáticamente el autómata.
         private Panel panelAutomata;
+
+        // Historial de todas las cadenas simuladas durante esta sesión.
+        private readonly List<RegistroValidacion> historialValidaciones =
+            new List<RegistroValidacion>();
 
         public Form1()
         {
@@ -515,9 +520,14 @@ namespace SimuladorAutomatas
             btnLimpiar.Text = "Limpiar todo";
             btnLimpiar.Size = new Size(160, 45);
 
+            Button btnHistorial = new Button();
+            btnHistorial.Name = "btnVerHistorial";
+            btnHistorial.Text = "Ver historial";
+            btnHistorial.Size = new Size(180, 45);
 
             barra.Controls.Add(btnConvertir);
             barra.Controls.Add(btnMinimizar);
+            barra.Controls.Add(btnHistorial);
             barra.Controls.Add(btnLimpiar);
 
 
@@ -526,6 +536,13 @@ namespace SimuladorAutomatas
             principal.Controls.Add(barra, 0, 2);
 
             this.Controls.Add(principal);
+
+
+            // ==========================================
+            // EVENTO: MOSTRAR HISTORIAL DE VALIDACIONES
+            // ==========================================
+
+            btnHistorial.Click += (s, e) => MostrarHistorial();
 
 
             // ==========================================
@@ -818,6 +835,10 @@ namespace SimuladorAutomatas
                     bool aceptada = simulador.SimularAFN(
                         automataActual, cadena);
 
+                    // Guardar cada simulación en el historial.
+                    string tipoAutomata = automataActual is AFD ? "AFD" : "AFN";
+                    historialValidaciones.Add(
+                        new RegistroValidacion(cadena, tipoAutomata, aceptada));
 
                     if (aceptada)
                     {
@@ -1137,9 +1158,114 @@ namespace SimuladorAutomatas
             }
         }
 
+        // Muestra en una ventana todas las cadenas simuladas en esta sesión.
+        private void MostrarHistorial()
+        {
+            Form ventana = new Form();
+            ventana.Text = "Historial de validaciones";
+            ventana.StartPosition = FormStartPosition.CenterParent;
+            ventana.Size = new Size(850, 450);
+            ventana.MinimumSize = new Size(650, 350);
+            ventana.BackColor = Color.FromArgb(242, 246, 251);
+
+            DataGridView tabla = new DataGridView();
+            tabla.Dock = DockStyle.Fill;
+            tabla.ReadOnly = true;
+            tabla.AllowUserToAddRows = false;
+            tabla.AllowUserToDeleteRows = false;
+            tabla.AutoGenerateColumns = false;
+            tabla.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            tabla.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            tabla.MultiSelect = false;
+            tabla.RowHeadersVisible = false;
+            tabla.BackgroundColor = Color.White;
+
+            tabla.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "FechaHora",
+                HeaderText = "Fecha y hora",
+                DataPropertyName = "FechaHora",
+                FillWeight = 32
+            });
+            tabla.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Cadena",
+                HeaderText = "Cadena",
+                DataPropertyName = "Cadena",
+                FillWeight = 20
+            });
+            tabla.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "TipoAutomata",
+                HeaderText = "Tipo",
+                DataPropertyName = "TipoAutomata",
+                FillWeight = 15
+            });
+            tabla.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Resultado",
+                HeaderText = "Resultado",
+                DataPropertyName = "Resultado",
+                FillWeight = 20
+            });
+
+            var fuente = historialValidaciones
+                .Select(r => new
+                {
+                    FechaHora = r.FechaHora.ToString("dd/MM/yyyy HH:mm:ss"),
+                    r.Cadena,
+                    r.TipoAutomata,
+                    r.Resultado
+                })
+                .ToList();
+
+            tabla.DataSource = fuente;
+
+            Label encabezado = new Label();
+            encabezado.Text = "Historial de validaciones  |  Total de pruebas: " +
+                historialValidaciones.Count;
+            encabezado.Dock = DockStyle.Top;
+            encabezado.Height = 42;
+            encabezado.TextAlign = ContentAlignment.MiddleLeft;
+            encabezado.Padding = new Padding(12, 0, 0, 0);
+            encabezado.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+
+            Button btnCerrar = new Button();
+            btnCerrar.Text = "Cerrar";
+            btnCerrar.Width = 100;
+            btnCerrar.Height = 32;
+            btnCerrar.Anchor = AnchorStyles.Right | AnchorStyles.Bottom;
+            btnCerrar.Click += (s, e) => ventana.Close();
+
+            Panel panelInferior = new Panel();
+            panelInferior.Dock = DockStyle.Bottom;
+            panelInferior.Height = 48;
+            btnCerrar.Location = new Point(panelInferior.Width - 115, 7);
+            panelInferior.Resize += (s, e) =>
+                btnCerrar.Location = new Point(panelInferior.Width - 115, 7);
+            panelInferior.Controls.Add(btnCerrar);
+
+            ventana.Controls.Add(tabla);
+            ventana.Controls.Add(panelInferior);
+            ventana.Controls.Add(encabezado);
+
+            if (historialValidaciones.Count == 0)
+            {
+                MessageBox.Show(
+                    ventana,
+                    "Todavía no has simulado ninguna cadena.",
+                    "Historial vacío",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+
+            ventana.ShowDialog(this);
+        }
+
         private void Form1_Load(object sender, EventArgs e)
         {
             // Evento de carga del formulario.
         }
     }
 }
+
