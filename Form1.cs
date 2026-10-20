@@ -22,6 +22,11 @@ namespace SimuladorAutomatas
         // Panel donde se dibuja automáticamente el autómata.
         private Panel panelAutomata;
 
+        // Controles para validar expresiones regulares.
+        private TextBox txtExpresion;
+        private TextBox txtCadenaRegex;
+        private Label lblResultadoRegex;
+
         // Historial de todas las cadenas simuladas durante esta sesión.
         private readonly List<RegistroValidacion> historialValidaciones =
             new List<RegistroValidacion>();
@@ -53,7 +58,7 @@ namespace SimuladorAutomatas
             principal.Dock = DockStyle.Fill;
             principal.Padding = new Padding(12);
             principal.ColumnCount = 1;
-            principal.RowCount = 3;
+            principal.RowCount = 4;
 
             principal.ColumnStyles.Add(
                 new ColumnStyle(SizeType.Percent, 100));
@@ -63,6 +68,9 @@ namespace SimuladorAutomatas
 
             principal.RowStyles.Add(
                 new RowStyle(SizeType.Percent, 100));
+
+            principal.RowStyles.Add(
+                new RowStyle(SizeType.Absolute, 90));
 
             principal.RowStyles.Add(
                 new RowStyle(SizeType.Absolute, 65));
@@ -489,6 +497,64 @@ namespace SimuladorAutomatas
 
 
             // ==========================================
+            // PANEL: EXPRESIONES REGULARES
+            // ==========================================
+
+            GroupBox grupoRegex = new GroupBox();
+            grupoRegex.Text = "Validación mediante expresión regular";
+            grupoRegex.Dock = DockStyle.Fill;
+            grupoRegex.Padding = new Padding(8);
+            grupoRegex.Margin = new Padding(5);
+
+            FlowLayoutPanel areaRegex = new FlowLayoutPanel();
+            areaRegex.Dock = DockStyle.Fill;
+            areaRegex.WrapContents = false;
+            areaRegex.AutoScroll = true;
+            areaRegex.FlowDirection = FlowDirection.LeftToRight;
+
+            Label lblExpresion = new Label();
+            lblExpresion.Text = "Expresión:";
+            lblExpresion.AutoSize = true;
+            lblExpresion.Margin = new Padding(5, 10, 3, 3);
+
+            txtExpresion = new TextBox();
+            txtExpresion.Name = "txtExpresion";
+            txtExpresion.Width = 150;
+            txtExpresion.Text = @"a(b|c)*";
+
+            Label lblCadenaRegex = new Label();
+            lblCadenaRegex.Text = "Cadena:";
+            lblCadenaRegex.AutoSize = true;
+            lblCadenaRegex.Margin = new Padding(8, 10, 3, 3);
+
+            txtCadenaRegex = new TextBox();
+            txtCadenaRegex.Name = "txtCadenaRegex";
+            txtCadenaRegex.Width = 120;
+
+            Button btnValidarRegex = new Button();
+            btnValidarRegex.Name = "btnValidarRegex";
+            btnValidarRegex.Text = "Validar cadena";
+            btnValidarRegex.Width = 120;
+            btnValidarRegex.Height = 30;
+            btnValidarRegex.Click += btnValidarRegex_Click;
+
+            lblResultadoRegex = new Label();
+            lblResultadoRegex.Name = "lblResultadoRegex";
+            lblResultadoRegex.Text = "Ingresa los datos para comenzar.";
+            lblResultadoRegex.AutoSize = true;
+            lblResultadoRegex.Margin = new Padding(8, 10, 3, 3);
+
+            areaRegex.Controls.Add(lblExpresion);
+            areaRegex.Controls.Add(txtExpresion);
+            areaRegex.Controls.Add(lblCadenaRegex);
+            areaRegex.Controls.Add(txtCadenaRegex);
+            areaRegex.Controls.Add(btnValidarRegex);
+            areaRegex.Controls.Add(lblResultadoRegex);
+
+            grupoRegex.Controls.Add(areaRegex);
+
+
+            // ==========================================
             // BARRA INFERIOR
             // ==========================================
 
@@ -533,7 +599,8 @@ namespace SimuladorAutomatas
 
             principal.Controls.Add(encabezado, 0, 0);
             principal.Controls.Add(contenido, 0, 1);
-            principal.Controls.Add(barra, 0, 2);
+            principal.Controls.Add(grupoRegex, 0, 2);
+            principal.Controls.Add(barra, 0, 3);
 
             this.Controls.Add(principal);
 
@@ -1260,6 +1327,27 @@ namespace SimuladorAutomatas
             }
 
             ventana.ShowDialog(this);
+        }
+
+        private void btnValidarRegex_Click(object sender, EventArgs e)
+        {
+            ValidadorExpresiones validador = new ValidadorExpresiones();
+
+            string expresion = txtExpresion.Text.Trim();
+            string cadena = txtCadenaRegex.Text;
+            string mensaje;
+
+            bool aceptada = validador.ValidarCadena(
+                expresion, cadena, out mensaje);
+
+            lblResultadoRegex.Text = mensaje;
+            lblResultadoRegex.ForeColor = aceptada
+                ? Color.DarkGreen
+                : Color.DarkRed;
+
+            // Registrar también las validaciones de expresiones regulares.
+            historialValidaciones.Add(
+                new RegistroValidacion(cadena, "Expresión regular", aceptada));
         }
 
         private void Form1_Load(object sender, EventArgs e)
