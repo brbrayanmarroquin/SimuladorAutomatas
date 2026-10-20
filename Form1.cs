@@ -7,6 +7,8 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
+using SimuladorAutomatas.Automatas;
+using SimuladorAutomatas.Modelos;
 
 
 namespace SimuladorAutomatas
@@ -45,6 +47,8 @@ namespace SimuladorAutomatas
 
             // Construimos la interfaz.
             ConstruirInterfaz();
+
+            ProbarConversionRegex();
         }
 
         private void ConstruirInterfaz()
@@ -1349,6 +1353,34 @@ namespace SimuladorAutomatas
             historialValidaciones.Add(
                 new RegistroValidacion(cadena, "Expresión regular", aceptada));
         }
+
+
+        private void ProbarConversionRegex()
+        {
+            try
+            {
+                ConversorRegexAFN conversor = new ConversorRegexAFN();
+
+                AFN resultado = conversor.Convertir("a(b|c)*");
+
+                MessageBox.Show(
+                    "Conversión realizada correctamente.\n\n" +
+                    "Estados: " + resultado.Estados.Count + "\n" +
+                    "Transiciones: " + resultado.Transiciones.Count + "\n" +
+                    "Estado inicial: " + resultado.EstadoInicial.Nombre + "\n" +
+                    "Estados finales: " + resultado.EstadosFinales.Count,
+                    "Prueba de conversión"
+                );
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    ex.Message,
+                    "Error al convertir expresión"
+                );
+            }
+        }
+
 
         private void Form1_Load(object sender, EventArgs e)
         {
