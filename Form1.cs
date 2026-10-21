@@ -1,14 +1,15 @@
 ﻿using SimuladorAutomatas.Automatas;
+using SimuladorAutomatas.Automatas;
+using SimuladorAutomatas.Modelos;
 using SimuladorAutomatas.Modelos;
 using SimuladorAutomatas.Servicios;
 using System;
 using System.Collections.Generic;
-using System.Windows.Forms;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
-using SimuladorAutomatas.Automatas;
-using SimuladorAutomatas.Modelos;
+using System.Text;
+using System.Windows.Forms;
 
 
 namespace SimuladorAutomatas
@@ -47,8 +48,10 @@ namespace SimuladorAutomatas
 
             // Construimos la interfaz.
             ConstruirInterfaz();
-
             ProbarConversionRegex();
+
+
+
         }
 
         private void ConstruirInterfaz()
@@ -1355,31 +1358,70 @@ namespace SimuladorAutomatas
         }
 
 
+
         private void ProbarConversionRegex()
         {
             try
             {
+                // 1. Convertimos la expresión regular en un AFN.
                 ConversorRegexAFN conversor = new ConversorRegexAFN();
+                AFN automataGenerado = conversor.Convertir("a(b|c)*");
 
-                AFN resultado = conversor.Convertir("a(b|c)*");
+                // 2. Utilizamos el simulador que ya tiene el proyecto.
+                Simulador simulador = new Simulador();
+
+                // 3. Definimos las cadenas de prueba.
+                string[] cadenas =
+                {
+            "a",
+            "ab",
+            "ac",
+            "abcb",
+            "b",
+            "abcx",
+            "ba",
+            ""
+        };
+
+                StringBuilder resultados = new StringBuilder();
+
+                resultados.AppendLine("Expresión regular: a(b|c)*");
+                resultados.AppendLine("Estados: " + automataGenerado.Estados.Count);
+                resultados.AppendLine();
+                resultados.AppendLine("RESULTADOS DE LAS PRUEBAS:");
+                resultados.AppendLine("--------------------------");
+
+                foreach (string cadena in cadenas)
+                {
+                    bool aceptada = simulador.SimularAFN(
+                        automataGenerado,
+                        cadena
+                    );
+
+                    string textoCadena = cadena == ""
+                        ? "(cadena vacía)"
+                        : cadena;
+
+                    resultados.AppendLine(
+                        textoCadena + " -> " +
+                        (aceptada ? "ACEPTADA" : "RECHAZADA")
+                    );
+                }
 
                 MessageBox.Show(
-                    "Conversión realizada correctamente.\n\n" +
-                    "Estados: " + resultado.Estados.Count + "\n" +
-                    "Transiciones: " + resultado.Transiciones.Count + "\n" +
-                    "Estado inicial: " + resultado.EstadoInicial.Nombre + "\n" +
-                    "Estados finales: " + resultado.EstadosFinales.Count,
-                    "Prueba de conversión"
+                    resultados.ToString(),
+                    "Pruebas de conversión Regex a AFN"
                 );
             }
             catch (Exception ex)
             {
                 MessageBox.Show(
                     ex.Message,
-                    "Error al convertir expresión"
+                    "Error en las pruebas"
                 );
             }
         }
+
 
 
         private void Form1_Load(object sender, EventArgs e)
