@@ -1,6 +1,4 @@
 ﻿using SimuladorAutomatas.Automatas;
-using SimuladorAutomatas.Automatas;
-using SimuladorAutomatas.Modelos;
 using SimuladorAutomatas.Modelos;
 using SimuladorAutomatas.Servicios;
 using System;
@@ -48,7 +46,7 @@ namespace SimuladorAutomatas
 
             // Construimos la interfaz.
             ConstruirInterfaz();
-            ProbarConversionRegex();
+            
 
 
 
@@ -1336,91 +1334,72 @@ namespace SimuladorAutomatas
             ventana.ShowDialog(this);
         }
 
+
         private void btnValidarRegex_Click(object sender, EventArgs e)
         {
-            ValidadorExpresiones validador = new ValidadorExpresiones();
-
             string expresion = txtExpresion.Text.Trim();
             string cadena = txtCadenaRegex.Text;
-            string mensaje;
 
-            bool aceptada = validador.ValidarCadena(
-                expresion, cadena, out mensaje);
-
-            lblResultadoRegex.Text = mensaje;
-            lblResultadoRegex.ForeColor = aceptada
-                ? Color.DarkGreen
-                : Color.DarkRed;
-
-            // Registrar también las validaciones de expresiones regulares.
-            historialValidaciones.Add(
-                new RegistroValidacion(cadena, "Expresión regular", aceptada));
-        }
-
-
-
-        private void ProbarConversionRegex()
-        {
             try
             {
-                // 1. Convertimos la expresión regular en un AFN.
+                // 1. Convertir la expresión regular en un AFN.
                 ConversorRegexAFN conversor = new ConversorRegexAFN();
-                AFN automataGenerado = conversor.Convertir("a(b|c)*");
+                AFN afnGenerado = conversor.Convertir(expresion);
 
-                // 2. Utilizamos el simulador que ya tiene el proyecto.
+                // 2. Simular la cadena utilizando el AFN generado.
                 Simulador simulador = new Simulador();
+                bool aceptada = simulador.SimularAFN(afnGenerado, cadena);
 
-                // 3. Definimos las cadenas de prueba.
-                string[] cadenas =
+                // 3. Mostrar el resultado.
+                lblResultadoRegex.Text = aceptada
+                    ? "Cadena aceptada por el AFN generado."
+                    : "Cadena rechazada por el AFN generado.";
+
+                lblResultadoRegex.ForeColor = aceptada
+                    ? Color.DarkGreen
+                    : Color.DarkRed;
+
+                // 4. Actualizar el autómata actual para mostrarlo
+                // en el panel gráfico.
+                automataActual = afnGenerado;
+
+                if (panelAutomata != null)
                 {
-            "a",
-            "ab",
-            "ac",
-            "abcb",
-            "b",
-            "abcx",
-            "ba",
-            ""
-        };
-
-                StringBuilder resultados = new StringBuilder();
-
-                resultados.AppendLine("Expresión regular: a(b|c)*");
-                resultados.AppendLine("Estados: " + automataGenerado.Estados.Count);
-                resultados.AppendLine();
-                resultados.AppendLine("RESULTADOS DE LAS PRUEBAS:");
-                resultados.AppendLine("--------------------------");
-
-                foreach (string cadena in cadenas)
-                {
-                    bool aceptada = simulador.SimularAFN(
-                        automataGenerado,
-                        cadena
-                    );
-
-                    string textoCadena = cadena == ""
-                        ? "(cadena vacía)"
-                        : cadena;
-
-                    resultados.AppendLine(
-                        textoCadena + " -> " +
-                        (aceptada ? "ACEPTADA" : "RECHAZADA")
-                    );
+                    panelAutomata.Invalidate();
                 }
 
-                MessageBox.Show(
-                    resultados.ToString(),
-                    "Pruebas de conversión Regex a AFN"
+                // 5. Registrar la validación en el historial.
+                historialValidaciones.Add(
+                    new RegistroValidacion(
+                        cadena,
+                        "Expresión regular → AFN",
+                        aceptada
+                    )
                 );
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    ex.Message,
-                    "Error en las pruebas"
+                // Mostrar errores de sintaxis o conversión.
+                lblResultadoRegex.Text =
+                    "Error en la expresión: " + ex.Message;
+
+                lblResultadoRegex.ForeColor = Color.DarkRed;
+
+                // Registrar también el intento fallido.
+                historialValidaciones.Add(
+                    new RegistroValidacion(
+                        cadena,
+                        "Expresión regular → AFN",
+                        false
+                    )
                 );
             }
         }
+
+
+
+
+        
 
 
 
