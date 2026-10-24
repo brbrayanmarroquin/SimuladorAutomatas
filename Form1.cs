@@ -1118,117 +1118,235 @@ namespace SimuladorAutomatas
         }
 
         // Dibuja los estados y transiciones usando GDI+ de Windows Forms.
+
         private void DibujarAutomata(Graphics graphics)
         {
             graphics.SmoothingMode = SmoothingMode.AntiAlias;
             graphics.Clear(Color.White);
 
-            if (automataActual == null || automataActual.Estados == null ||
+            if (automataActual == null ||
+                automataActual.Estados == null ||
                 automataActual.Estados.Count == 0)
             {
-                using (Font fuenteVacia = new Font("Segoe UI", 10))
-                using (Brush pincelVacio = new SolidBrush(Color.DimGray))
+                using (Font fuente = new Font("Segoe UI", 10))
+                using (Brush pincel = new SolidBrush(Color.DimGray))
                 {
                     string mensaje = "La representación gráfica aparecerá aquí.";
-                    SizeF medida = graphics.MeasureString(mensaje, fuenteVacia);
-                    graphics.DrawString(mensaje, fuenteVacia, pincelVacio,
+                    SizeF medida = graphics.MeasureString(mensaje, fuente);
+
+                    graphics.DrawString(
+                        mensaje,
+                        fuente,
+                        pincel,
                         Math.Max(5, (panelAutomata.ClientSize.Width - medida.Width) / 2),
-                        Math.Max(5, (panelAutomata.ClientSize.Height - medida.Height) / 2));
+                        Math.Max(5, (panelAutomata.ClientSize.Height - medida.Height) / 2)
+                    );
                 }
+
                 return;
             }
 
             int ancho = panelAutomata.ClientSize.Width;
             int alto = panelAutomata.ClientSize.Height;
-            if (ancho < 80 || alto < 80) return;
+
+            if (ancho < 80 || alto < 80)
+                return;
 
             const float radio = 24f;
-            float y = alto / 2f;
-            float margen = radio + 28f;
-            float espacio = automataActual.Estados.Count == 1
-                ? 0
-                : Math.Max(0, (ancho - margen * 2) / (float)(automataActual.Estados.Count - 1));
+            const float separacionX = 85f;
+            const float separacionY = 100f;
 
-            var posiciones = new System.Collections.Generic.Dictionary<Estado, PointF>();
-            for (int i = 0; i < automataActual.Estados.Count; i++)
+            int cantidad = automataActual.Estados.Count;
+
+            // Calculamos cuántos estados caben por fila.
+            int estadosPorFila = Math.Max(
+                1,
+                (int)((ancho - 30) / separacionX)
+            );
+
+            int filas = (int)Math.Ceiling(
+                cantidad / (double)estadosPorFila
+            );
+
+            float espacioVertical = Math.Min(
+                separacionY,
+                (alto - 2 * radio - 20) / Math.Max(1, filas)
+            );
+
+            var posiciones =
+                new System.Collections.Generic.Dictionary<Estado, PointF>();
+
+            // Distribuir los estados en filas.
+            for (int i = 0; i < cantidad; i++)
             {
-                float x = automataActual.Estados.Count == 1
-                    ? ancho / 2f
-                    : margen + i * espacio;
+                int fila = i / estadosPorFila;
+                int columna = i % estadosPorFila;
+
+                // Alternamos la dirección de cada fila para facilitar
+                // el seguimiento de las transiciones.
+                if (fila % 2 == 1)
+                    columna = estadosPorFila - 1 - columna;
+
+                int cantidadEnFila = Math.Min(
+                    estadosPorFila,
+                    cantidad - fila * estadosPorFila
+                );
+
+                if (fila % 2 == 1)
+                    columna = estadosPorFila - 1 - (i % estadosPorFila);
+
+                float anchoFila = (cantidadEnFila - 1) * separacionX;
+                float inicioX = Math.Max(
+                    radio + 10,
+                    (ancho - anchoFila) / 2f
+                );
+
+                // Ajustar la posición de las filas invertidas.
+                float x = inicioX + (i % estadosPorFila) * separacionX;
+
+                if (fila % 2 == 1)
+                    x = inicioX + (cantidadEnFila - 1 - (i % estadosPorFila)) * separacionX;
+
+                float y = radio + 25 + fila * espacioVertical;
+
                 posiciones[automataActual.Estados[i]] = new PointF(x, y);
             }
 
             using (Pen lapiz = new Pen(Color.FromArgb(35, 45, 60), 1.8f))
             using (Pen lapizInicial = new Pen(Color.FromArgb(35, 45, 60), 1.8f))
-            using (Brush rellenoEstado = new SolidBrush(Color.FromArgb(222, 235, 255)))
+            using (Brush relleno = new SolidBrush(Color.FromArgb(222, 235, 255)))
             using (Brush pincelTexto = new SolidBrush(Color.FromArgb(25, 35, 50)))
             using (Font fuenteEstado = new Font("Segoe UI", 9, FontStyle.Bold))
             using (Font fuenteSimbolo = new Font("Segoe UI", 9, FontStyle.Bold))
-            using (StringFormat centrado = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+            using (StringFormat centrado = new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            })
             {
                 lapiz.EndCap = LineCap.ArrowAnchor;
                 lapizInicial.EndCap = LineCap.ArrowAnchor;
 
-                // Transiciones entre estados distintos.
+                // Dibujar las transiciones primero, detrás de los estados.
                 foreach (Transicion transicion in automataActual.Transiciones)
                 {
                     if (!posiciones.ContainsKey(transicion.EstadoOrigen) ||
-                        !posiciones.ContainsKey(transicion.EstadoDestino)) continue;
+                        !posiciones.ContainsKey(transicion.EstadoDestino))
+                        continue;
 
                     PointF origen = posiciones[transicion.EstadoOrigen];
                     PointF destino = posiciones[transicion.EstadoDestino];
 
                     if (transicion.EstadoOrigen == transicion.EstadoDestino)
                     {
-                        RectangleF bucle = new RectangleF(origen.X - 15, origen.Y - radio - 28, 30, 28);
+                        RectangleF bucle = new RectangleF(
+                            origen.X - 15,
+                            origen.Y - radio - 28,
+                            30,
+                            28
+                        );
+
                         graphics.DrawArc(lapiz, bucle, 180, 300);
-                        graphics.DrawString(transicion.Simbolo, fuenteSimbolo, pincelTexto,
-                            origen.X, origen.Y - radio - 38, centrado);
+
+                        graphics.DrawString(
+                            transicion.Simbolo,
+                            fuenteSimbolo,
+                            pincelTexto,
+                            origen.X,
+                            origen.Y - radio - 38,
+                            centrado
+                        );
+
+                        continue;
                     }
-                    else
-                    {
-                        float dx = destino.X - origen.X;
-                        float dy = destino.Y - origen.Y;
-                        float distancia = (float)Math.Sqrt(dx * dx + dy * dy);
-                        if (distancia < 1) continue;
-                        float ux = dx / distancia;
-                        float uy = dy / distancia;
-                        PointF inicio = new PointF(origen.X + ux * radio, origen.Y + uy * radio);
-                        PointF fin = new PointF(destino.X - ux * (radio + 3), destino.Y - uy * (radio + 3));
-                        graphics.DrawLine(lapiz, inicio, fin);
-                        PointF medio = new PointF((inicio.X + fin.X) / 2f, (inicio.Y + fin.Y) / 2f - 12);
-                        graphics.DrawString(transicion.Simbolo, fuenteSimbolo, pincelTexto, medio, centrado);
-                    }
+
+                    float dx = destino.X - origen.X;
+                    float dy = destino.Y - origen.Y;
+                    float distancia = (float)Math.Sqrt(dx * dx + dy * dy);
+
+                    if (distancia < 1)
+                        continue;
+
+                    float ux = dx / distancia;
+                    float uy = dy / distancia;
+
+                    PointF inicio = new PointF(
+                        origen.X + ux * radio,
+                        origen.Y + uy * radio
+                    );
+
+                    PointF fin = new PointF(
+                        destino.X - ux * (radio + 3),
+                        destino.Y - uy * (radio + 3)
+                    );
+
+                    graphics.DrawLine(lapiz, inicio, fin);
+
+                    PointF medio = new PointF(
+                        (inicio.X + fin.X) / 2f,
+                        (inicio.Y + fin.Y) / 2f - 12
+                    );
+
+                    graphics.DrawString(
+                        transicion.Simbolo,
+                        fuenteSimbolo,
+                        pincelTexto,
+                        medio,
+                        centrado
+                    );
                 }
 
-                // Flecha de entrada y círculos de los estados.
+                // Dibujar los estados por encima de las transiciones.
                 foreach (Estado estado in automataActual.Estados)
                 {
                     PointF centro = posiciones[estado];
-                    RectangleF circulo = new RectangleF(centro.X - radio, centro.Y - radio, radio * 2, radio * 2);
+
+                    RectangleF circulo = new RectangleF(
+                        centro.X - radio,
+                        centro.Y - radio,
+                        radio * 2,
+                        radio * 2
+                    );
 
                     if (estado.EsInicial || estado == automataActual.EstadoInicial)
                     {
-                        graphics.DrawLine(lapizInicial,
-                            Math.Max(2, centro.X - radio - 24), centro.Y,
-                            centro.X - radio - 2, centro.Y);
+                        graphics.DrawLine(
+                            lapizInicial,
+                            Math.Max(2, centro.X - radio - 24),
+                            centro.Y,
+                            centro.X - radio - 2,
+                            centro.Y
+                        );
                     }
 
-                    graphics.FillEllipse(rellenoEstado, circulo);
+                    graphics.FillEllipse(relleno, circulo);
                     graphics.DrawEllipse(lapiz, circulo);
 
-                    if (estado.EsFinal || (automataActual.EstadosFinales != null && automataActual.EstadosFinales.Contains(estado)))
+                    if (estado.EsFinal ||
+                        (automataActual.EstadosFinales != null &&
+                         automataActual.EstadosFinales.Contains(estado)))
                     {
-                        RectangleF circuloInterior = new RectangleF(
-                            centro.X - radio + 5, centro.Y - radio + 5,
-                            (radio - 5) * 2, (radio - 5) * 2);
-                        graphics.DrawEllipse(lapiz, circuloInterior);
+                        RectangleF interior = new RectangleF(
+                            centro.X - radio + 5,
+                            centro.Y - radio + 5,
+                            (radio - 5) * 2,
+                            (radio - 5) * 2
+                        );
+
+                        graphics.DrawEllipse(lapiz, interior);
                     }
 
-                    graphics.DrawString(estado.Nombre, fuenteEstado, pincelTexto, circulo, centrado);
+                    graphics.DrawString(
+                        estado.Nombre,
+                        fuenteEstado,
+                        pincelTexto,
+                        circulo,
+                        centrado
+                    );
                 }
             }
         }
+
 
         // Muestra en una ventana todas las cadenas simuladas en esta sesión.
         private void MostrarHistorial()
