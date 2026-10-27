@@ -1134,6 +1134,7 @@ namespace SimuladorAutomatas
 
         // Dibuja los estados y transiciones usando GDI+ de Windows Forms.
 
+
         private void DibujarAutomata(Graphics graphics)
         {
             graphics.SmoothingMode = SmoothingMode.AntiAlias;
@@ -1168,60 +1169,42 @@ namespace SimuladorAutomatas
                 return;
 
             const float radio = 24f;
-            const float separacionX = 85f;
+            const float separacionX = 100f;
             const float separacionY = 100f;
 
             int cantidad = automataActual.Estados.Count;
 
-            // Calculamos cuántos estados caben por fila.
+            // Calculamos la distribución de los estados.
             int estadosPorFila = Math.Max(
                 1,
-                (int)((ancho - 30) / separacionX)
+                (int)((ancho - 2 * radio - 30) / separacionX) + 1
             );
 
-            int filas = (int)Math.Ceiling(
-                cantidad / (double)estadosPorFila
-            );
+            estadosPorFila = Math.Min(estadosPorFila, cantidad);
 
-            float espacioVertical = Math.Min(
-                separacionY,
-                (alto - 2 * radio - 20) / Math.Max(1, filas)
-            );
+            int filas = (int)Math.Ceiling(cantidad / (double)estadosPorFila);
 
-            var posiciones =
-                new System.Collections.Generic.Dictionary<Estado, PointF>();
+            float espacioVertical = filas > 1
+                ? Math.Min(separacionY, (alto - 2 * radio - 20) / (filas - 1))
+                : 0;
 
-            // Distribuir los estados en filas.
+            var posiciones = new Dictionary<Estado, PointF>();
+
             for (int i = 0; i < cantidad; i++)
             {
                 int fila = i / estadosPorFila;
                 int columna = i % estadosPorFila;
-
-                // Alternamos la dirección de cada fila para facilitar
-                // el seguimiento de las transiciones.
-                if (fila % 2 == 1)
-                    columna = estadosPorFila - 1 - columna;
 
                 int cantidadEnFila = Math.Min(
                     estadosPorFila,
                     cantidad - fila * estadosPorFila
                 );
 
-                if (fila % 2 == 1)
-                    columna = estadosPorFila - 1 - (i % estadosPorFila);
-
+                // Centrar también la última fila si tiene menos estados.
                 float anchoFila = (cantidadEnFila - 1) * separacionX;
-                float inicioX = Math.Max(
-                    radio + 10,
-                    (ancho - anchoFila) / 2f
-                );
+                float inicioX = (ancho - anchoFila) / 2f;
 
-                // Ajustar la posición de las filas invertidas.
-                float x = inicioX + (i % estadosPorFila) * separacionX;
-
-                if (fila % 2 == 1)
-                    x = inicioX + (cantidadEnFila - 1 - (i % estadosPorFila)) * separacionX;
-
+                float x = inicioX + columna * separacionX;
                 float y = radio + 25 + fila * espacioVertical;
 
                 posiciones[automataActual.Estados[i]] = new PointF(x, y);
@@ -1242,7 +1225,7 @@ namespace SimuladorAutomatas
                 lapiz.EndCap = LineCap.ArrowAnchor;
                 lapizInicial.EndCap = LineCap.ArrowAnchor;
 
-                // Dibujar las transiciones primero, detrás de los estados.
+                // Dibujar las transiciones detrás de los estados.
                 foreach (Transicion transicion in automataActual.Transiciones)
                 {
                     if (!posiciones.ContainsKey(transicion.EstadoOrigen) ||
@@ -1311,7 +1294,7 @@ namespace SimuladorAutomatas
                     );
                 }
 
-                // Dibujar los estados por encima de las transiciones.
+                // Dibujar los estados, incluido el inicial.
                 foreach (Estado estado in automataActual.Estados)
                 {
                     PointF centro = posiciones[estado];
@@ -1323,7 +1306,15 @@ namespace SimuladorAutomatas
                         radio * 2
                     );
 
-                    if (estado.EsInicial || estado == automataActual.EstadoInicial)
+                    bool esInicial =
+                        estado == automataActual.EstadoInicial || estado.EsInicial;
+
+                    bool esFinal =
+                        estado.EsFinal ||
+                        (automataActual.EstadosFinales != null &&
+                         automataActual.EstadosFinales.Contains(estado));
+
+                    if (esInicial)
                     {
                         graphics.DrawLine(
                             lapizInicial,
@@ -1337,9 +1328,7 @@ namespace SimuladorAutomatas
                     graphics.FillEllipse(relleno, circulo);
                     graphics.DrawEllipse(lapiz, circulo);
 
-                    if (estado.EsFinal ||
-                        (automataActual.EstadosFinales != null &&
-                         automataActual.EstadosFinales.Contains(estado)))
+                    if (esFinal)
                     {
                         RectangleF interior = new RectangleF(
                             centro.X - radio + 5,
