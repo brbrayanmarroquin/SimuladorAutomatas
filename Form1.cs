@@ -46,7 +46,7 @@ namespace SimuladorAutomatas
 
             // Construimos la interfaz.
             ConstruirInterfaz();
-            
+
 
 
 
@@ -350,14 +350,21 @@ namespace SimuladorAutomatas
             btnSimular.FlatStyle = FlatStyle.Flat;
 
 
-            Label lblResultado = new Label();
+            // Cuadro de resultado con desplazamiento para mostrar
+            // el resultado y el recorrido completo de la cadena.
+            RichTextBox lblResultado = new RichTextBox();
 
             lblResultado.Name = "lblResultado";
             lblResultado.Text =
-                "Aquí aparecerá el resultado de la simulación.";
+                "Aquí aparecerá el resultado y el recorrido de la simulación.";
 
             lblResultado.Dock = DockStyle.Fill;
-            lblResultado.AutoSize = false;
+            lblResultado.ReadOnly = true;
+            lblResultado.Multiline = true;
+            lblResultado.WordWrap = true;
+            lblResultado.ScrollBars = RichTextBoxScrollBars.Vertical;
+            lblResultado.BorderStyle = BorderStyle.None;
+            lblResultado.Font = new Font("Segoe UI", 9);
             lblResultado.Padding = new Padding(8);
             lblResultado.BackColor = Color.White;
 
@@ -899,39 +906,47 @@ namespace SimuladorAutomatas
                         return;
                     }
 
-
                     string cadena = txtCadena.Text;
-
                     Simulador simulador = new Simulador();
 
-                    bool aceptada = simulador.SimularAFN(
-                        automataActual, cadena);
+                    // Obtener tanto la aceptación como el recorrido
+                    // de los estados alcanzados en cada paso.
+                    ResultadoSimulacion resultado =
+                        simulador.SimularConRecorrido(automataActual, cadena);
+
+                    bool aceptada = resultado.Aceptada;
 
                     // Guardar cada simulación en el historial.
                     string tipoAutomata = automataActual is AFD ? "AFD" : "AFN";
                     historialValidaciones.Add(
                         new RegistroValidacion(cadena, tipoAutomata, aceptada));
 
-                    if (aceptada)
-                    {
-                        lblResultado.Text =
-                            "✓ CADENA ACEPTADA\n\n" +
-                            "La cadena pertenece al lenguaje del autómata.";
+                    StringBuilder detalle = new StringBuilder();
 
-                        lblResultado.ForeColor = Color.DarkGreen;
-                        lblResultado.BackColor =
-                            Color.FromArgb(225, 247, 235);
-                    }
-                    else
-                    {
-                        lblResultado.Text =
-                            "✗ CADENA RECHAZADA\n\n" +
-                            "La cadena no pertenece al lenguaje del autómata.";
+                    detalle.AppendLine(aceptada
+                        ? "✓ CADENA ACEPTADA"
+                        : "✗ CADENA RECHAZADA");
+                    detalle.AppendLine();
+                    detalle.AppendLine("Recorrido de la simulación:");
 
-                        lblResultado.ForeColor = Color.DarkRed;
-                        lblResultado.BackColor =
-                            Color.FromArgb(255, 232, 232);
+                    foreach (string paso in resultado.Pasos)
+                    {
+                        detalle.AppendLine(paso);
                     }
+
+                    detalle.AppendLine();
+                    detalle.Append(
+                        aceptada
+                            ? "La cadena pertenece al lenguaje del autómata."
+                            : "La cadena no pertenece al lenguaje del autómata.");
+
+                    lblResultado.Text = detalle.ToString();
+                    lblResultado.ForeColor = aceptada
+                        ? Color.DarkGreen
+                        : Color.DarkRed;
+                    lblResultado.BackColor = aceptada
+                        ? Color.FromArgb(225, 247, 235)
+                        : Color.FromArgb(255, 232, 232);
                 }
                 catch (Exception ex)
                 {
@@ -1517,7 +1532,7 @@ namespace SimuladorAutomatas
 
 
 
-        
+
 
 
 
@@ -1527,4 +1542,6 @@ namespace SimuladorAutomatas
         }
     }
 }
+
+
 

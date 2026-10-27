@@ -1,33 +1,72 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using System.Collections.Generic;
-using System.Linq;
 using SimuladorAutomatas.Modelos;
 
 namespace SimuladorAutomatas.Servicios
 {
+    /// <summary>
+    /// Contiene el resultado de una simulación y los pasos que se mostraron
+    /// durante el procesamiento de la cadena.
+    /// </summary>
+    public class ResultadoSimulacion
+    {
+        public bool Aceptada { get; set; }
+        public List<string> Pasos { get; set; } = new List<string>();
+    }
+
     public class Simulador
     {
+        // Se conserva este método para no romper las partes del proyecto
+        // que solamente necesitan saber si una cadena se acepta o rechaza.
         public bool SimularAFN(Automata automata, string cadena)
         {
-            // Comenzamos con el estado inicial
-            HashSet<Estado> estadosActuales = new HashSet<Estado>();
+            return SimularConRecorrido(automata, cadena).Aceptada;
+        }
 
-            estadosActuales.Add(automata.EstadoInicial);
+        /// <summary>
+        /// Simula la cadena y devuelve el conjunto de estados posibles
+        /// después de cada símbolo, incluyendo las cerraduras epsilon.
+        /// Esto funciona para AFN y también para AFD.
+        /// </summary>
+        public ResultadoSimulacion SimularConRecorrido(
+            Automata automata,
+            string cadena)
+        {
+            if (automata == null)
+                throw new ArgumentNullException(nameof(automata));
 
-            // Antes de leer la cadena,
-            // buscamos todos los estados alcanzables mediante ε
+            if (cadena == null)
+                throw new ArgumentNullException(nameof(cadena));
+
+            if (automata.EstadoInicial == null)
+                throw new InvalidOperationException(
+                    "El autómata no tiene un estado inicial.");
+
+            ResultadoSimulacion resultado = new ResultadoSimulacion();
+
+            HashSet<Estado> estadosActuales =
+                new HashSet<Estado> { automata.EstadoInicial };
+
             estadosActuales = CerraduraEpsilon(automata, estadosActuales);
 
-            // Procesamos cada símbolo de la cadena
+            resultado.Pasos.Add(
+                "Inicio: " + FormatearEstados(estadosActuales));
+
+            if (!estadosActuales.SetEquals(
+                new HashSet<Estado> { automata.EstadoInicial }))
+            {
+                resultado.Pasos.Add(
+                    "Cerradura ε inicial: " + FormatearEstados(estadosActuales));
+            }
+
+            int numeroPaso = 0;
+
             foreach (char caracter in cadena)
             {
+                numeroPaso++;
                 string simbolo = caracter.ToString();
-
+                HashSet<Estado> estadosOrigen = new HashSet<Estado>(estadosActuales);
                 HashSet<Estado> nuevosEstados = new HashSet<Estado>();
 
                 foreach (Estado estadoActual in estadosActuales)
@@ -43,29 +82,51 @@ namespace SimuladorAutomatas.Servicios
                     }
                 }
 
-                // Después de consumir el símbolo,
-                // volvemos a buscar las ε-transiciones.
-                estadosActuales = CerraduraEpsilon(automata, nuevosEstados);
-
-                // Si no quedan estados posibles,
-                // la cadena es rechazada.
-                if (estadosActuales.Count == 0)
+                if (nuevosEstados.Count == 0)
                 {
-                    return false;
+                    resultado.Pasos.Add(
+                        "Paso " + numeroPaso + ": leer '" + simbolo +
+                        "' desde " + FormatearEstados(estadosOrigen) +
+                        " → ∅ (no existe una transición para este símbolo).");
+
+                    estadosActuales.Clear();
+                    break;
                 }
+
+                resultado.Pasos.Add(
+                    "Paso " + numeroPaso + ": leer '" + simbolo +
+                    "' desde " + FormatearEstados(estadosOrigen) +
+                    " → " + FormatearEstados(nuevosEstados));
+
+                HashSet<Estado> estadosConEpsilon =
+                    CerraduraEpsilon(automata, nuevosEstados);
+
+                if (!estadosConEpsilon.SetEquals(nuevosEstados))
+                {
+                    resultado.Pasos.Add(
+                        "  Después de ε: " +
+                        FormatearEstados(estadosConEpsilon));
+                }
+
+                estadosActuales = estadosConEpsilon;
             }
 
-            // Revisamos si alguno de los estados actuales
-            // es un estado final.
-            foreach (Estado estado in estadosActuales)
-            {
-                if (estado.EsFinal)
-                {
-                    return true;
-                }
-            }
+            bool hayEstadoFinal = estadosActuales.Any(estado =>
+                estado.EsFinal ||
+                (automata.EstadosFinales != null &&
+                 automata.EstadosFinales.Contains(estado)));
 
-            return false;
+            resultado.Aceptada = hayEstadoFinal;
+
+            resultado.Pasos.Add(
+                "Estados al terminar: " + FormatearEstados(estadosActuales));
+
+            resultado.Pasos.Add(
+                hayEstadoFinal
+                    ? "Conclusión: se alcanzó al menos un estado final."
+                    : "Conclusión: no se alcanzó ningún estado final.");
+
+            return resultado;
         }
 
         private HashSet<Estado> CerraduraEpsilon(
@@ -92,15 +153,26 @@ namespace SimuladorAutomatas.Servicios
                 {
                     Estado destino = transicion.EstadoDestino;
 
-                    if (!resultado.Contains(destino))
+                    if (resultado.Add(destino))
                     {
-                        resultado.Add(destino);
                         pendientes.Push(destino);
                     }
                 }
             }
 
             return resultado;
+        }
+
+        private string FormatearEstados(IEnumerable<Estado> estados)
+        {
+            List<string> nombres = estados
+                .Select(e => e.Nombre)
+                .OrderBy(nombre => nombre, StringComparer.Ordinal)
+                .ToList();
+
+            return nombres.Count == 0
+                ? "∅"
+                : "{ " + string.Join(", ", nombres) + " }";
         }
     }
 }
