@@ -1235,28 +1235,42 @@ namespace SimuladorAutomatas
                     PointF origen = posiciones[transicion.EstadoOrigen];
                     PointF destino = posiciones[transicion.EstadoDestino];
 
+
+
                     if (transicion.EstadoOrigen == transicion.EstadoDestino)
                     {
+                        // Dibujar el bucle sobre el estado.
                         RectangleF bucle = new RectangleF(
-                            origen.X - 15,
-                            origen.Y - radio - 28,
-                            30,
-                            28
+                            origen.X - 17,
+                            origen.Y - radio - 25,
+                            34,
+                            25
                         );
 
                         graphics.DrawArc(lapiz, bucle, 180, 300);
+
+                        // Dibujar el símbolo debajo del arco y por encima del estado.
+                        RectangleF etiqueta = new RectangleF(
+                            origen.X - 20,
+                            origen.Y - radio - 22,
+                            40,
+                            18
+                        );
+
+                        graphics.FillRectangle(Brushes.White, etiqueta);
 
                         graphics.DrawString(
                             transicion.Simbolo,
                             fuenteSimbolo,
                             pincelTexto,
-                            origen.X,
-                            origen.Y - radio - 38,
+                            etiqueta,
                             centrado
                         );
 
                         continue;
                     }
+
+
 
                     float dx = destino.X - origen.X;
                     float dy = destino.Y - origen.Y;
